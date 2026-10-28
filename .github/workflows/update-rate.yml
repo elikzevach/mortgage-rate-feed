@@ -1,0 +1,63 @@
+name: Update national average mortgage rate
+
+on:
+  schedule:
+    # FRED publishes Freddie Mac's weekly survey on Thursdays around 12pm ET.
+    # Check every day at 17:30 UTC and again at 21:30 UTC so updates land the same afternoon.
+    - cron: "30 17 * * *"
+    - cron: "30 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch MORTGAGE30US from FRED
+        run: |
+          python3 - <<'PY'
+          import csv, io, json, urllib.request, datetime
+          url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=MORTGAGE30US"
+          req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (rate-feed for elikzevachmlo.com)"})
+          text = urllib.request.urlopen(req, timeout=60).read().decode("utf-8")
+          rows = [r for r in csv.reader(io.StringIO(text)) if r]
+          data = [(d, v) for d, v in rows[1:] if v not in (".", "")]
+          date, value = data[-1]
+          prev_date, prev_value = data[-2]
+          out = {
+              "series": "MORTGAGE30US",
+              "label": "National average 30-year fixed mortgage rate",
+              "rate": round(float(value), 2),
+              "date": date,
+              "previous_rate": round(float(prev_value), 2),
+              "previous_date": prev_date,
+              "source": "Freddie Mac Primary Mortgage Market Survey, via FRED (Federal Reserve Bank of St. Louis)",
+              "source_url": "https://fred.stlouisfed.org/series/MORTGAGE30US",
+              "checked_at": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+          }
+          old = {}
+          try:
+              old = json.load(open("rate.json"))
+          except Exception:
+              pass
+          # Only rewrite when the rate or week changed, so the repo history stays clean.
+          if old.get("rate") != out["rate"] or old.get("date") != out["date"]:
+              json.dump(out, open("rate.json", "w"), indent=2)
+              print("Updated:", out["rate"], out["date"])
+          else:
+              print("No change:", out["rate"], out["date"])
+          PY
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain rate.json)" ]; then
+            git config user.name "rate-feed-bot"
+            git config user.email "rate-feed-bot@users.noreply.github.com"
+            git add rate.json
+            git commit -m "Update national average rate from FRED"
+            git push
+          fi
