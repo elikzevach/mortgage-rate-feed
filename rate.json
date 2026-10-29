@@ -1,11 +1,11 @@
 {
   "series": "MORTGAGE30US",
   "label": "National average 30-year fixed mortgage rate",
-  "rate": 7.32,
-  "date": "2026-10-22",
-  "previous_rate": 7.4,
-  "previous_date": "2026-10-15",
+  "rate": 7.24,
+  "date": "2026-10-29",
+  "previous_rate": 7.32,
+  "previous_date": "2026-10-22",
   "source": "Freddie Mac Primary Mortgage Market Survey, via FRED (Federal Reserve Bank of St. Louis)",
   "source_url": "https://fred.stlouisfed.org/series/MORTGAGE30US",
-  "checked_at": "2026-10-28T09:30:00Z"
+  "checked_at": "2026-10-29T21:57:19Z"
 }
